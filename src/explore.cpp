@@ -58,6 +58,13 @@ Explore::Explore()
   , prev_distance_(0)
   , last_markers_count_(0)
 {
+
+  // Capture and store the robot's initial position for later use in returning to start
+  geometry_msgs::Point initial_pose_;
+  auto initial_pose_msg = costmap_client_.getRobotPose();  // getRobotPose returns a pose message
+  initial_pose_ = initial_pose_msg.position;  // Store the initial position
+
+
   double timeout;
   double min_frontier_size;
   private_nh_.param("planner_frequency", planner_frequency_, 1.0);
@@ -182,6 +189,11 @@ void Explore::makePlan()
   auto pose = costmap_client_.getRobotPose();
   // get frontiers sorted according to cost
   auto frontiers = search_.searchFrom(pose.position);
+  if (frontiers.empty()) {
+      ROS_INFO("Exploration complete. Initiating return to start.");
+      returnToStart();  // Call the method to return to start when exploration is complete
+      return;
+  }  
   ROS_DEBUG("found %lu frontiers", frontiers.size());
   for (size_t i = 0; i < frontiers.size(); ++i) {
     ROS_DEBUG("frontier %zd cost: %f", i, frontiers[i].cost);
@@ -291,6 +303,20 @@ void Explore::stop()
   exploring_timer_.stop();
   ROS_INFO("Exploration stopped.");
 }
+
+// Method to navigate the robot back to its initial starting position
+void Explore::returnToStart()
+{
+    move_base_msgs::MoveBaseGoal goal;
+    goal.target_pose.pose.position = initial_pose_;  // Set the goal to the initial position
+    goal.target_pose.pose.orientation.w = 1.0;  // Orientation, assuming facing forward at destination
+    goal.target_pose.header.frame_id = costmap_client_.getGlobalFrameID();
+    goal.target_pose.header.stamp = ros::Time::now();  // Set the current time as the stamp
+
+    move_base_client_.sendGoal(goal);  // Send the goal to the move_base action server
+    ROS_INFO("Returning to the starting point.");  // Log the action
+}
+
 
 }  // namespace explore
 
