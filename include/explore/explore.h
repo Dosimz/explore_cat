@@ -72,7 +72,7 @@ private:
    * @brief  Make a global plan
    */
   void makePlan();
-
+  void returnToStart();
   /**
    * @brief  Publish a frontiers as markers
    */
@@ -110,6 +110,8 @@ private:
   double potential_scale_, orientation_scale_, gain_scale_;
   ros::Duration progress_timeout_;
   bool visualize_;
+  // start
+  geometry_msgs::Point initial pose_;
 };
 }
 
